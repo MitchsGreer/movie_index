@@ -1,0 +1,20 @@
+# ==============================================================================
+# Simple pyproject.toml for this project.
+# ==============================================================================
+[project]
+name = "movie_index"
+version = "1.0.0"
+description = "A flask webpage to uload movies names and provide a random one."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE.txt"}
+dependencies = [
+  "flask==3.0.0"
+]
+
+[project.scripts]
+sample = "movie_index:main"
+
+[build-system]
+requires = ["setuptools>=43.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
