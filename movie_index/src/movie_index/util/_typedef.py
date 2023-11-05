@@ -1,5 +1,5 @@
 """Type information for this project."""
-from typing import Union
 from pathlib import Path
+from typing import Union
 
 File_t = Union[str, Path]

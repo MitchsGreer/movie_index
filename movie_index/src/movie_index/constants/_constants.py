@@ -13,7 +13,7 @@ MOVIE_SOURCES = [
     "Peacock",
     "Max",
     "Hulu",
-    "Disney+"
+    "Disney+",
 ]
 SECRET_KEY = "Shhhh, I am secret!"
 JSON_INDENT = 4

@@ -3,6 +3,7 @@ import dataclasses
 import json
 from typing import Any, Dict
 
+
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o) -> Dict[str, Any]:
         """Default decoder.
