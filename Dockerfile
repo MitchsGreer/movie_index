@@ -40,4 +40,4 @@ RUN python3 -m pip install .dist/* && \
 # ------------------------------------------------------------------------------
 # Entry point for this docker container.
 # ------------------------------------------------------------------------------
-ENTRYPOINT [ "/bin/bash" ]
+ENTRYPOINT [ "/usr/local/bin/python3", "-m", "movie_index" ]

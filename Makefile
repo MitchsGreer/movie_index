@@ -45,6 +45,10 @@ ${TARGET}: .dist/movie_index-1.0.0-py3-none-any.whl
 	@. .venv/bin/activate
 	@python -m pdm build --no-sdist -d ../.dist/ -p movie_index/
 
+cache:
+	@mkdir cache
+	@chmod 777 cache
+
 # ------------------------------------------------------------------------------
 # Phonies! (Utility Commands)
 # ------------------------------------------------------------------------------
@@ -70,8 +74,8 @@ format: .venv/lib/python3.10/site-packages/black .venv/lib/python3.10/site-packa
 	@python -m isort movie_index
 
 .PHONY: run
-run: ${TARGET}
-	@docker run -ti ${TARGET}
+run: ${TARGET} cache
+	@docker run -ti -v $(CURDIR)/cache:/home/u_movie_index/cache ${TARGET}
 
 .PHONY: help
 help:
