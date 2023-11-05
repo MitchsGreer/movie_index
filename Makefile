@@ -23,27 +23,22 @@ ${TARGET}: .dist/movie_index-1.0.0-py3-none-any.whl
 
 .venv/lib/python3.10/site-packages/pdm:
 	@python3 -m venv .venv
-	@. .venv/bin/activate
-	@python -m pip install pdm
+	@. .venv/bin/activate; python -m pip install pdm
 
 .venv/lib/python3.10/site-packages/black:
 	@python3 -m venv .venv
-	@. .venv/bin/activate
-	@python -m pip install black
+	@. .venv/bin/activate; python -m pip install black
 
 .venv/lib/python3.10/site-packages/isort:
 	@python3 -m venv .venv
-	@. .venv/bin/activate
-	@python -m pip install isort
+	@. .venv/bin/activate; python -m pip install isort
 
 .venv/lib/python3.10/site-packages/ruff:
 	@python3 -m venv .venv
-	@. .venv/bin/activate
-	@python -m pip install ruff
+	@. .venv/bin/activate; python -m pip install ruff
 
 .dist/movie_index-1.0.0-py3-none-any.whl: .venv/lib/python3.10/site-packages/pdm ${PYTHON_SRC} movie_index/pyproject.toml
-	@. .venv/bin/activate
-	@python -m pdm build --no-sdist -d ../.dist/ -p movie_index/
+	@. .venv/bin/activate; python -m pdm build --no-sdist -d ../.dist/ -p movie_index/
 
 cache:
 	@mkdir cache
@@ -60,18 +55,15 @@ doc:
 clean:
 	@rm -rf .dist
 	@rm -rf .venv
-	@docker image rm ${TARGET}
+	@docker image rm -f ${TARGET}
 
 .PHONY: lint
 lint: .venv/lib/python3.10/site-packages/ruff
-	@. .venv/bin/activate
-	@python -m ruff check movie_index/ --select F401 --select F403 --quiet
+	@. .venv/bin/activate; python -m ruff check movie_index/ --select F401 --select F403 --quiet
 
 .PHONY: format
 format: .venv/lib/python3.10/site-packages/black .venv/lib/python3.10/site-packages/isort
-	@. .venv/bin/activate
-	@python -m black movie_index
-	@python -m isort movie_index
+	@. .venv/bin/activate; python -m black movie_index; python -m isort movie_index
 
 .PHONY: run
 run: ${TARGET} cache

@@ -1,61 +1,77 @@
-"""Movie Index Class.
-
-TODO:
-    - Add title mangling so they are not shown in the database.
-"""
+"""Movie Index Class."""
 from typing import List
 import socket
 import json
 from pathlib import Path
-from base64 import encode, decode
+from base64 import b64encode, b64decode
+import random
 
-from flask import Flask, render_template_string, request
+from flask import Flask, render_template_string, request, flash, session
 
 from movie_index.util import File_t, EnhancedJSONEncoder
+from movie_index.constants import (
+    ASCII_ENCODING,
+    UTF8_ENCODING,
+    DEFAULT_IP,
+    DEFAULT_WEB_PORT,
+    GET,
+    POST,
+    MOVIE_SOURCES,
+    SECRET_KEY,
+    JSON_INDENT
+)
 from ._movie import Movie
-
 from ._webpage import (
-    WEBPAGE,
+    INDEX_PAGE,
     MOVIE_TITLE_INPUT,
     MOVIE_SOURCE_SELECTION_INPUT,
-    SUBMIT_BUTTON_INPUT
+    SUBMIT_BUTTON_INPUT,
+    ADD_MOVIE_SUBMIT_VALUE,
+    GEN_RAND_SUBMIT_VALUE,
+    MOVIE_SOURCES_OUTPUT
 )
 
 class MovieIndex(Flask):
-    POST = "POST"
-    GET = "GET"
     JSON_DATABASE = Path("cache", "database.json")
 
     def __init__(self, *args, **kwargs) -> None:
+        """Constructor for MovieIndex.
+
+        Args:
+            All Args are passed to flask.Flask constructor.
+        """
         super().__init__(*args, **kwargs)
 
+        # Add pages.
         self.add_main_page()
 
+        # Load default config.
         self.movie_list: List[Movie] = []
-        self.movie_sources = sorted(
-            [
-                "Amazon Prime",
-                "Apple TV",
-                "Netflix",
-                "Peacock",
-                "Max",
-                "Hulu",
-                "Disney+"
-            ]
-        )
+        self.movie_sources = sorted(MOVIE_SOURCES)
 
+        # Make sure the database can be saved.
         if Path(self.JSON_DATABASE).exists():
             self._read_movies(self.JSON_DATABASE)
 
+        # Set the session secret.
+        self.config['SECRET_KEY'] = SECRET_KEY
+
     def __del__(self) -> None:
-        """Destructor for this flask app."""
+        """Destructor for this flask app.
+
+        Stores the movies into the database.
+        """
         self._store_movies(self.JSON_DATABASE)
 
     @staticmethod
     def host_ip() -> str:
-        """Get the host IP."""
+        """Get the host IP.
+
+        Returns:
+            The IP for the current host.
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
+        s.connect((DEFAULT_IP, DEFAULT_WEB_PORT))
         host_ip = s.getsockname()[0]
         s.close()
 
@@ -63,38 +79,52 @@ class MovieIndex(Flask):
 
     def add_main_page(self) -> None:
         """Add the main flask page."""
-        self.add_url_rule("/", view_func=self._index, methods=[MovieIndex.GET, MovieIndex.POST])
+        self.add_url_rule("/", view_func=self._index, methods=[GET, POST])
 
     def _index(self) -> str:
-        """Main index page for this flask app."""
-        if request.method == MovieIndex.POST:
-            movie_title = request.form.get(MOVIE_TITLE_INPUT)
-            movie_sources = request.form.getlist(MOVIE_SOURCE_SELECTION_INPUT)
+        """Main index page for this flask app.
 
-            self.movie_list.append(
-                Movie(movie_title, movie_sources)
-            )
+        On GET: Renders the main page for adding movies to he database.
+        On POST: Adds a movie to the database.
+
+        Returns:
+            The rendered database to print.
+        """
+        return_code = 200
+        if request.method == POST:
+            if request.form.get(SUBMIT_BUTTON_INPUT) == ADD_MOVIE_SUBMIT_VALUE:
+                movie_title = self._encode_string(request.form.get(MOVIE_TITLE_INPUT))
+                movie_sources = request.form.getlist(MOVIE_SOURCE_SELECTION_INPUT)
+                self.movie_list.append(
+                    Movie(movie_title, movie_sources)
+                )
+                self._store_movies(self.JSON_DATABASE)
+            elif request.form.get(SUBMIT_BUTTON_INPUT) == GEN_RAND_SUBMIT_VALUE:
+                random_movie = self._decode_cipher(random.choice(self.movie_list).title)
+                flash(f"Movie chosen: {random_movie}")
+            else:
+                return_code = 204
 
         return render_template_string(
-            WEBPAGE,
+            INDEX_PAGE,
             **{
-                "movie_sources": self.movie_sources
+                MOVIE_SOURCES_OUTPUT: self.movie_sources
             }
-        )
+        ), return_code
 
     def _store_movies(self, database: File_t) -> None:
         """Store all the movies that we have.
 
-        Arguments:
+        Args:
             database: The file to save the movie data to.
         """
         Path(self.JSON_DATABASE).parent.mkdir(exist_ok=True, parents=True)
-        Path(database).write_text(json.dumps(self.movie_list, cls=EnhancedJSONEncoder))
+        Path(database).write_text(json.dumps(self.movie_list, cls=EnhancedJSONEncoder, indent=JSON_INDENT))
 
     def _read_movies(self, database: File_t) -> None:
         """Read all the movies from the given database file.
 
-        Arguments:
+        Args:
             database: The file to read the movie data from.
         """
         json_data = json.loads(Path(database).read_text())
@@ -103,6 +133,25 @@ class MovieIndex(Flask):
             self.movie_list.append(Movie(**entry))
 
     @staticmethod
-    def _encode_title(title: str) -> str:
-        """Base 64 encode the given title."""
-        return encode(title)
+    def _encode_string(msg: str) -> bytes:
+        """Base 64 encode the given ASCII message.
+
+        Args:
+            msg: The ASCII message to encode.
+
+        Returns:
+            The encoded ASCII message in base64.
+        """
+        return b64encode(bytes(msg, encoding=ASCII_ENCODING)).decode(encoding=UTF8_ENCODING)
+
+    @staticmethod
+    def _decode_cipher(cipher_text: str) -> str:
+        """Base 64 decode the given ASCII cipher.
+
+        Args:
+            cipher_text: The ASCII cipher to decode.
+
+        Returns:
+            The decoded ASCII message.
+        """
+        return b64decode(bytes(cipher_text, encoding=ASCII_ENCODING)).decode(encoding=UTF8_ENCODING)

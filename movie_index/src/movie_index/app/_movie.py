@@ -4,5 +4,5 @@ from dataclasses import dataclass
 
 @dataclass
 class Movie:
-    title: str
-    sources: List[str]
+    title: str  # The title of thid movie.
+    sources: List[str]  # The list of places this movie can be watched from.
