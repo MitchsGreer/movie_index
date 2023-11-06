@@ -88,8 +88,9 @@ class MovieIndex(Flask):
                 self.movie_list.append(Movie(movie_title, movie_sources))
                 self._store_movies(self.JSON_DATABASE)
             elif request.form.get(SUBMIT_BUTTON_INPUT) == GEN_RAND_SUBMIT_VALUE:
-                random_movie = self._decode_cipher(random.choice(self.movie_list).title)
-                flash(f"Movie chosen: {random_movie}")
+                random_movie = random.choice(self.movie_list)
+                flash(f"Movie chosen: {self._decode_cipher(random_movie.title)}")
+                flash(f"Movie Sources: {', '.join(random_movie.sources)}")
             else:
                 return_code = 204
 
