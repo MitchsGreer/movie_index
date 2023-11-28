@@ -93,13 +93,16 @@ class MovieIndex(Flask):
                 self.movie_list.append(Movie(movie_title, movie_sources))
                 self._store_movies()
             elif request.form.get(SUBMIT_BUTTON_INPUT) == GEN_RAND_SUBMIT_VALUE:
-                random_movie_index = random.randint(0, len(self.movie_list))
-                random_movie = self.movie_list.pop(random_movie_index)
+                if self.movie_list:
+                    random_movie_index = random.randint(0, len(self.movie_list))
+                    random_movie = self.movie_list.pop(random_movie_index)
 
-                flash(f"Movie chosen: {self._decode_cipher(random_movie.title)}")
-                flash(f"Movie Sources: {', '.join(random_movie.sources)}")
+                    flash(f"Movie chosen: {self._decode_cipher(random_movie.title)}")
+                    flash(f"Movie Sources: {', '.join(random_movie.sources)}")
 
-                self.watched_movies.append(random_movie)
+                    self.watched_movies.append(random_movie)
+                else:
+                    flash("No unwatched movies left!")
             else:
                 return_code = 204
 

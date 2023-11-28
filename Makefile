@@ -67,7 +67,7 @@ format: .venv/lib/python3.10/site-packages/black .venv/lib/python3.10/site-packa
 
 .PHONY: run
 run: ${TARGET} cache
-	@docker run -ti -v $(CURDIR)/cache:/home/u_movie_index/cache ${TARGET}
+	@docker run -tid -p 5000:5000 -v $(CURDIR)/cache:/home/u_movie_index/cache ${TARGET}
 
 .PHONY: help
 help:
