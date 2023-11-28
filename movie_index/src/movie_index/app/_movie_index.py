@@ -22,7 +22,8 @@ from ._webpage import (ADD_MOVIE_SUBMIT_VALUE, GEN_RAND_SUBMIT_VALUE,
 
 
 class MovieIndex(Flask):
-    JSON_DATABASE = Path("cache", "database.json")
+    UNWATCHED_DATABASE = Path("cache", "unwatched_movies.json")
+    WATCHED_DATABASE = Path("cache", "watched_movies.json")
 
     def __init__(self, *args, **kwargs) -> None:
         """Constructor for MovieIndex.
@@ -37,11 +38,15 @@ class MovieIndex(Flask):
 
         # Load default config.
         self.movie_list: List[Movie] = []
+        self.watched_movies: List[Movie] = []
         self.movie_sources = sorted(MOVIE_SOURCES)
 
-        # Make sure the database can be saved.
-        if Path(self.JSON_DATABASE).exists():
-            self._read_movies(self.JSON_DATABASE)
+        # Read the movies in if they exist.
+        if (
+            Path(self.WATCHED_DATABASE).exists()
+            and Path(self.UNWATCHED_DATABASE).exists()
+        ):
+            self._read_movies()
 
         # Set the session secret.
         self.config["SECRET_KEY"] = SECRET_KEY
@@ -51,7 +56,7 @@ class MovieIndex(Flask):
 
         Stores the movies into the database.
         """
-        self._store_movies(self.JSON_DATABASE)
+        self._store_movies()
 
     @staticmethod
     def host_ip() -> str:
@@ -86,11 +91,15 @@ class MovieIndex(Flask):
                 movie_title = self._encode_string(request.form.get(MOVIE_TITLE_INPUT))
                 movie_sources = request.form.getlist(MOVIE_SOURCE_SELECTION_INPUT)
                 self.movie_list.append(Movie(movie_title, movie_sources))
-                self._store_movies(self.JSON_DATABASE)
+                self._store_movies()
             elif request.form.get(SUBMIT_BUTTON_INPUT) == GEN_RAND_SUBMIT_VALUE:
-                random_movie = random.choice(self.movie_list)
+                random_movie_index = random.randint(0, len(self.movie_list))
+                random_movie = self.movie_list.pop(random_movie_index)
+
                 flash(f"Movie chosen: {self._decode_cipher(random_movie.title)}")
                 flash(f"Movie Sources: {', '.join(random_movie.sources)}")
+
+                self.watched_movies.append(random_movie)
             else:
                 return_code = 204
 
@@ -101,27 +110,43 @@ class MovieIndex(Flask):
             return_code,
         )
 
-    def _store_movies(self, database: File_t) -> None:
-        """Store all the movies that we have.
+    def _store_movies(self) -> None:
+        """Store all the movies that we have."""
+        self._store_movie_list(self.UNWATCHED_DATABASE, self.movie_list)
+        self._store_movie_list(self.WATCHED_DATABASE, self.watched_movies)
+
+    @staticmethod
+    def _store_movie_list(database: File_t, movie_list: List[Movie]) -> None:
+        """Store the given list of movies into the given JSON database file.
 
         Args:
-            database: The file to save the movie data to.
+            database: The file to store the movie list in.
+            movie_list: The list to store.
         """
-        Path(self.JSON_DATABASE).parent.mkdir(exist_ok=True, parents=True)
+        Path(database).parent.mkdir(exist_ok=True, parents=True)
         Path(database).write_text(
-            json.dumps(self.movie_list, cls=EnhancedJSONEncoder, indent=JSON_INDENT)
+            json.dumps(movie_list, cls=EnhancedJSONEncoder, indent=JSON_INDENT)
         )
 
-    def _read_movies(self, database: File_t) -> None:
-        """Read all the movies from the given database file.
+    def _read_movies(self) -> None:
+        """Read all the movies from the given database file."""
+        self.movie_list = self._read_movie_list(self.UNWATCHED_DATABASE)
+        self.watched_movies = self._read_movie_list(self.WATCHED_DATABASE)
+
+    @staticmethod
+    def _read_movie_list(database: File_t) -> List[Movie]:
+        """Read the given list of movies from the given JSON database file.
 
         Args:
-            database: The file to read the movie data from.
+            database: The file to read the movie list from.
         """
         json_data = json.loads(Path(database).read_text())
 
+        movie_list = []
         for entry in json_data:
-            self.movie_list.append(Movie(**entry))
+            movie_list.append(Movie(**entry))
+
+        return movie_list
 
     @staticmethod
     def _encode_string(msg: str) -> bytes:
